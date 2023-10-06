@@ -367,10 +367,8 @@ extension YPPickerVC: YPLibraryViewDelegate {
     }
     
     public func libraryViewDidToggleMultipleSelection(enabled: Bool) {
-        var offset = v.header.frame.height
-        if #available(iOS 11.0, *) {
-            offset += v.safeAreaInsets.bottom
-        }
+        let offset = v.header.frame.height
+
         
         v.header.bottomConstraint?.constant = enabled ? offset : 0
         v.layoutIfNeeded()

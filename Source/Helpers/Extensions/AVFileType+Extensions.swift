@@ -9,7 +9,7 @@
 import AVFoundation
 import MobileCoreServices
 
-extension AVFileType {
+public extension AVFileType {
     /// Fetch and extension for a file from UTI string
     var fileExtension: String {
         if let ext = UTTypeCopyPreferredTagWithClass(self as CFString,

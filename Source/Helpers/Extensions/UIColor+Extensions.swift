@@ -64,7 +64,7 @@ extension UIColor {
     /// The base blue color.
     ///
     /// Like `.systemBlue`, but backwards-compatible with iOS 12 and lower.
-    static var ypSystemBlue: UIColor {
+    public static var ypSystemBlue: UIColor {
         if #available(iOS 13, *) {
             return .systemBlue
         }

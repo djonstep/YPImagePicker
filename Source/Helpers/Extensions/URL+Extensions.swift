@@ -8,7 +8,7 @@
 
 import UIKit
 
-extension URL {
+public extension URL {
     /// Adds a unique path to url
     func appendingUniquePathComponent(pathExtension: String? = nil) -> URL {
         var pathComponent = UUID().uuidString

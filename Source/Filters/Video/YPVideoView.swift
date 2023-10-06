@@ -15,9 +15,10 @@ import AVFoundation
 public class YPVideoView: UIView {
     public let playImageView = UIImageView(image: nil)
     
-    internal let playerView = UIView()
-    internal let playerLayer = AVPlayerLayer()
-    internal var previewImageView = UIImageView()
+    public let playerView = UIView()
+    public let playerLayer = AVPlayerLayer()
+    public var previewImageView = UIImageView()
+    public var rate: Float = 1
     
     public var player: AVPlayer {
         guard let player = playerLayer.player else {
@@ -110,18 +111,21 @@ extension YPVideoView {
     }
     
     public func play() {
-        player.play()
+//        player.play()
+        player.rate = rate
         showPlayImage(show: false)
         addReachEndObserver()
     }
     
     public func pause() {
-        player.pause()
+//        player.pause()
+        player.rate = 0
         showPlayImage(show: true)
     }
     
     public func stop() {
-        player.pause()
+//        player.pause()
+        player.rate = 0
         player.seek(to: CMTime.zero)
         showPlayImage(show: true)
         removeReachEndObserver()

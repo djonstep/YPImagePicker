@@ -15,10 +15,12 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
 
     /// Designated initializer
     public class func initWith(video: YPMediaVideo,
-                               isFromSelectionVC: Bool) -> YPVideoFiltersVC {
+                               isFromSelectionVC: Bool = false,
+                               rate: Float = 1) -> YPVideoFiltersVC {
         let vc = YPVideoFiltersVC()
         vc.inputVideo = video
         vc.isFromSelectionVC = isFromSelectionVC
+        vc.rate = rate
         return vc
     }
 
@@ -34,6 +36,7 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
     private var playbackTimeCheckerTimer: Timer?
     private var imageGenerator: AVAssetImageGenerator?
     private var isFromSelectionVC = false
+    private var rate: Float = 1
 
     private let trimmerContainerView: UIView = {
         let v = UIView()
@@ -68,6 +71,7 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
     }()
     private let videoView: YPVideoView = {
         let v = YPVideoView()
+        v.playerLayer.videoGravity = .resizeAspectFill
         return v
     }()
     private let coverImageView: UIImageView = {
@@ -75,6 +79,28 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
         v.contentMode = .scaleAspectFit
         v.isHidden = true
         return v
+    }()
+    private lazy var closeButton: UIButton = {
+        let b = UIButton()
+        b.setBackgroundImage(UIImage(named: "close-circle-button-image")?.withRenderingMode(.alwaysOriginal), for: .normal)
+        b.addTarget(self, action: #selector(cancel), for: .touchUpInside)
+        return b
+    }()
+    private lazy var saveButton: UIButton = {
+        let b = UIButton()
+        b.setBackgroundImage(UIImage(named: "selected-image")?.withRenderingMode(.alwaysOriginal), for: .normal)
+        b.addTarget(self, action: #selector(save), for: .touchUpInside)
+        return b
+    }()
+    private lazy var activityIndicator: UIActivityIndicatorView = {
+        if #available(iOS 13.0, *) {
+            let a = UIActivityIndicatorView(style: .medium)
+            a.color = .white
+            return a
+        } else {
+            let a = UIActivityIndicatorView(style: .white)
+            return a
+        }
     }()
 
     // MARK: - Live cycle
@@ -85,7 +111,7 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
         setupLayout()
         title = YPConfig.wordings.trim
         view.backgroundColor = YPConfig.colors.filterBackgroundColor
-        setupNavigationBar(isFromSelectionVC: self.isFromSelectionVC)
+//        setupNavigationBar(isFromSelectionVC: self.isFromSelectionVC)
 
         // Remove the default and add a notification to repeat playback from the start
         videoView.removeReachEndObserver()
@@ -116,9 +142,14 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
         super.viewDidAppear(animated)
     }
     
+    public override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        navigationController?.setNavigationBarHidden(true, animated: animated)
+    }
+    
     public override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-
+        navigationController?.setNavigationBarHidden(false, animated: animated)
         stopPlaybackTimeChecker()
         videoView.stop()
     }
@@ -147,36 +178,62 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
     }
 
     private func setupLayout() {
+        view.backgroundColor = .black
+        var width = view.bounds.width
+        var height = width / 9 * 16
+        var multiplier: CGFloat {
+            let calculatedHeightWithBottomView = view.bounds.height - (UIDevice.current.hasNotch ? 129 : 96)
+            if height > calculatedHeightWithBottomView {
+                return calculatedHeightWithBottomView / height
+            }
+            return 1
+        }
+        width *= multiplier
+        height *= multiplier
         view.subviews(
-            trimBottomItem,
-            coverBottomItem,
             videoView,
             coverImageView,
+            closeButton,
+            saveButton,
+            activityIndicator,
             trimmerContainerView.subviews(
                 trimmerView,
                 coverThumbSelectorView
             )
         )
+        videoView.player.rate = rate
+        videoView.Height == height
+        videoView.Width == width
 
-        trimBottomItem.leading(0).height(40)
-        trimBottomItem.Bottom == view.safeAreaLayoutGuide.Bottom
-        trimBottomItem.Trailing == coverBottomItem.Leading
-        coverBottomItem.Bottom == view.safeAreaLayoutGuide.Bottom
-        coverBottomItem.trailing(0)
-        equal(sizes: trimBottomItem, coverBottomItem)
-
-        videoView.heightEqualsWidth().fillHorizontally().top(0)
-        videoView.Bottom == trimmerContainerView.Top
+        videoView.CenterX == view.CenterX
+        videoView.Top == view.safeAreaLayoutGuide.Top
+//        videoView.Bottom == trimmerContainerView.Bottom
 
         coverImageView.followEdges(videoView)
 
         trimmerContainerView.fillHorizontally()
-        trimmerContainerView.Top == videoView.Bottom
-        trimmerContainerView.Bottom == trimBottomItem.Top
+        trimmerContainerView.Bottom == videoView.Bottom - 16
+        trimmerContainerView.Height == 80
+//        trimmerContainerView.Bottom == view.safeAreaLayoutGuide.Bottom
 
-        trimmerView.fillHorizontally(padding: 30).centerVertically()
-        trimmerView.Height == trimmerContainerView.Height / 3
+        trimmerView.fillHorizontally(padding: 30).fillVertically()
+//        trimmerView.Height == trimmerContainerView.Height / 3
 
+        closeButton.Height == 32
+        closeButton.Width == 32
+        closeButton.Left == trimmerView.Left
+        closeButton.Bottom == trimmerView.Top - 16
+        
+        saveButton.Height == 32
+        saveButton.Width == 32
+        saveButton.Right == trimmerView.Right
+        saveButton.Bottom == trimmerView.Top - 16
+        
+        activityIndicator.Height == 32
+        activityIndicator.Width == 32
+        activityIndicator.CenterX == saveButton.CenterX
+        activityIndicator.CenterY == saveButton.CenterY
+        activityIndicator.isHidden = true
         coverThumbSelectorView.followEdges(trimmerView)
     }
 
@@ -187,7 +244,10 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
             return ypLog("Don't have saveCallback")
         }
 
-        navigationItem.rightBarButtonItem = YPLoaders.defaultLoader
+//        navigationItem.rightBarButtonItem = YPLoaders.defaultLoader
+        activityIndicator.isHidden = false
+        activityIndicator.startAnimating()
+        saveButton.isHidden = true
 
         do {
             let asset = AVURLAsset(url: inputVideo.url)
@@ -209,7 +269,9 @@ public final class YPVideoFiltersVC: UIViewController, IsMediaFilterVC {
 														   videoURL: destinationURL,
 														   asset: self?.inputVideo.asset)
                             didSave(YPMediaItem.video(v: resultVideo))
-                            self?.setupRightBarButtonItem()
+                            self?.activityIndicator.isHidden = true
+                            self?.activityIndicator.stopAnimating()
+                            self?.saveButton.isHidden = false
                         } else {
                             ypLog("Don't have coverImage.")
                         }
@@ -340,6 +402,28 @@ extension YPVideoFiltersVC: ThumbSelectorViewDelegate {
         if let imageGenerator = imageGenerator,
             let imageRef = try? imageGenerator.copyCGImage(at: imageTime, actualTime: nil) {
             coverImageView.image = UIImage(cgImage: imageRef)
+        }
+    }
+}
+
+extension UIDevice {
+    
+    var frame: CGRect {
+        if #available(iOS 15, *) {
+            if let frame = UIApplication.shared.windows.last?.frame {
+                return frame
+            }
+            return .zero
+        } else {
+            return UIScreen.main.bounds
+        }
+    }
+   
+    var hasNotch: Bool {
+        if frame.height == 568 || frame.height == 667 || frame.height == 736 {
+            return false
+        } else {
+            return true
         }
     }
 }

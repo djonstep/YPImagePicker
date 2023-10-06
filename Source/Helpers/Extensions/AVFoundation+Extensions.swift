@@ -21,7 +21,7 @@ internal func flippedDeviceInputForInput(_ input: AVCaptureDeviceInput) -> AVCap
     return try? AVCaptureDeviceInput(device: aDevice)
 }
 
-internal func thumbnailFromVideoPath(_ path: URL) -> UIImage {
+public func thumbnailFromVideoPath(_ path: URL) -> UIImage {
     let asset = AVURLAsset(url: path, options: nil)
     let gen = AVAssetImageGenerator(asset: asset)
     gen.appliesPreferredTrackTransform = true
